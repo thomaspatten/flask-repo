@@ -1,6 +1,6 @@
 from application import app, db, bcrypt
 from flask import render_template, redirect, url_for, request
-from application.forms import PostForm, RegistrationForm, LoginForm
+from application.forms import PostForm, RegistrationForm, LoginForm, UpdateAccountForm
 from application.models import Posts, Users
 from flask_login import login_user, current_user, logout_user, login_required
 
@@ -74,3 +74,33 @@ def post():
 def logout():
 	logout_user()
 	return redirect(url_for('login'))
+
+@app.route('/account', methods=['GET', 'POST'])
+@login_required
+def account():
+	form = UpdateAccountForm()
+	if form.validate_on_submit():
+		current_user.first_name = form.first_name.data
+		current_user.last_name = form.last_name.data
+		current_user.email = form.email.data
+		db.session.commit()
+		return redirect(url_for('account'))
+	elif request.method == 'GET':
+		form.first_name.data = current_user.first_name
+		form.last_name.data = current_user.last_name
+		form.email.data = current_user.email
+	return render_template('account.html', title='Account', form=form)
+
+@app.route("/account/delete", methods=["GET", "POST"])
+@login_required
+def account_delete():
+        user = current_user.id
+        posts = Posts.query.filter_by(user_id=user)
+        for post in posts:
+                db.session.delete(post)
+        account = Users.query.filter_by(id=user).first()
+        logout_user()
+        db.session.delete(account)
+        db.session.commit()
+        return redirect(url_for('register'))
+
